@@ -142,9 +142,6 @@
   [attributedText removeAttribute:RCTBaseTextShadowViewEmbeddedShadowViewAttributeName
                             range:NSMakeRange(0, attributedText.length)];
 
-  [attributedText removeAttribute:RCTTextAttributesTagAttributeName
-                            range:NSMakeRange(0, attributedText.length)];
-
   if (self.text.length) {
     NSAttributedString *propertyAttributedText =
       [[NSAttributedString alloc] initWithString:self.text
