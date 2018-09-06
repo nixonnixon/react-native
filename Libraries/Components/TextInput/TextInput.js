@@ -21,13 +21,15 @@ const StyleSheet = require('../../StyleSheet/StyleSheet');
 const Text = require('../../Text/Text');
 const TextAncestor = require('../../Text/TextAncestor');
 const TextInputState = require('./TextInputState');
+const Touchable = require('Touchable');
 const TouchableWithoutFeedback = require('../Touchable/TouchableWithoutFeedback');
 const UIManager = require('../../ReactNative/UIManager');
-
 const createReactClass = require('create-react-class');
 const invariant = require('invariant');
 const requireNativeComponent = require('../../ReactNative/requireNativeComponent');
 const warning = require('fbjs/lib/warning');
+const nullthrows = require('fbjs/lib/nullthrows');
+const { RCTVirtualText } = require('../../Text/RCTText');
 
 import type {TextStyleProp, ViewStyleProp} from '../../StyleSheet/StyleSheet';
 import type {ColorValue} from '../../StyleSheet/StyleSheetTypes';
@@ -299,6 +301,25 @@ type Props = $ReadOnly<{|
 
 const emptyFunctionThatReturnsTrue = () => true;
 
+type ResponseHandlers = $ReadOnly<{|
+  onStartShouldSetResponder: () => boolean,
+  onResponderGrant: (event: SyntheticEvent<>, dispatchID: string) => void,
+  onResponderMove: (event: SyntheticEvent<>) => void,
+  onResponderRelease: (event: SyntheticEvent<>) => void,
+  onResponderTerminate: (event: SyntheticEvent<>) => void,
+  onResponderTerminationRequest: () => boolean,
+|}>;
+
+type State = {|
+  touchable: {|
+    touchState: ?string,
+    responderID: ?number,
+  |},
+  isHighlighted: boolean,
+  createResponderHandlers: () => ResponseHandlers,
+  responseHandlers: ?ResponseHandlers,
+|};
+
 /**
  * A foundational component for inputting text into the app via a
  * keyboard. Props provide configurability for several features, such as
@@ -419,6 +440,14 @@ const TextInput = createReactClass({
       focusTextInput: TextInputState.focusTextInput,
       blurTextInput: TextInputState.blurTextInput,
     },
+    getDerivedStateFromProps: (nextProps: Object, prevState: Object) => {
+      return prevState.responseHandlers == null && isTouchable(nextProps)
+        ? {
+            ...prevState,
+            responseHandlers: prevState.createResponderHandlers(),
+          }
+        : null;
+    }
   },
   propTypes: {
     ...DeprecatedViewPropTypes,
@@ -932,12 +961,30 @@ const TextInput = createReactClass({
      * @platform android
      */
     showSoftInputOnFocus: PropTypes.bool,
+    touchableGetPressRectOffset: PropTypes.func,
+    touchableHandleActivePressIn: PropTypes.func,
+    touchableHandleActivePressOut: PropTypes.func,
+    touchableHandleLongPress: PropTypes.func,
+    touchableHandlePress: PropTypes.func,
+    touchableHandleResponderGrant: PropTypes.func,
+    touchableHandleResponderMove: PropTypes.func,
+    touchableHandleResponderRelease: PropTypes.func,
+    touchableHandleResponderTerminate: PropTypes.func,
+    touchableHandleResponderTerminationRequest: PropTypes.func
   },
   getDefaultProps() {
     return {
       allowFontScaling: true,
       rejectResponderTermination: true,
       underlineColorAndroid: 'transparent',
+    };
+  },
+  getInitialState: function() {
+    return {
+      ...Touchable.Mixin.touchableGetInitialState(),
+      isHighlighted: false,
+      createResponderHandlers: this._createResponseHandlers.bind(null, this),
+      responseHandlers: null,
     };
   },
   /**
@@ -997,16 +1044,41 @@ const TextInput = createReactClass({
   },
 
   render: function() {
+    let props = this.props;
     let textInput;
+
+    if (isTouchable(props)) {
+      props = {
+        ...props,
+        ...this.state.responseHandlers,
+        isHighlighted: this.state.isHighlighted,
+      };
+    }
+
     if (Platform.OS === 'ios') {
-      textInput = UIManager.getViewManagerConfig('RCTVirtualText')
-        ? this._renderIOS()
+      textInput = UIManager.RCTVirtualText
+        ? this._renderIOS(props)
         : this._renderIOSLegacy();
     } else if (Platform.OS === 'android') {
       textInput = this._renderAndroid();
     }
-    return (
-      <TextAncestor.Provider value={true}>{textInput}</TextAncestor.Provider>
+
+    //return (
+      // <TextAncestor.Provider value={true}>
+      //   {textInput}
+      // </TextAncestor.Provider>)
+
+    return (<TextAncestor.Consumer>
+        {hasTextAncestor =>
+          hasTextAncestor ? (
+            <RCTVirtualText {...props} />
+          ) : (
+            <TextAncestor.Provider value={true}>
+              {textInput}
+            </TextAncestor.Provider>
+          )
+        }
+      </TextAncestor.Consumer>
     );
   },
 
@@ -1117,8 +1189,8 @@ const TextInput = createReactClass({
     );
   },
 
-  _renderIOS: function() {
-    const props = Object.assign({}, this.props);
+  _renderIOS: function(currentProps) {
+    let props = Object.assign({}, currentProps);
     props.style = [this.props.style];
 
     if (props.selection && props.selection.end == null) {
@@ -1136,10 +1208,27 @@ const TextInput = createReactClass({
       props.style.unshift(styles.multilineInput);
     }
 
+    const isEditable = (props.editable || props.editable === undefined)
+
+    const rootProps = {
+      onLayout: props.onLayout,
+      accessible: props.accessible,
+      accessibilityLabel: props.accessibilityLabel,
+      accessibilityTraits: props.accessibilityTraits,
+      nativeID: this.props.nativeID,
+      testID: props.testID,
+      rejectResponderTermination: props.rejectResponderTermination,
+      accessibilityRole: props.accessibilityRole,
+      accessibilityStates: props.accessibilityStates
+    }
+
+    const textProps = isEditable ? {} : rootProps
+
     const textContainer = (
       <RCTTextInputView
         ref={this._setNativeRef}
         {...props}
+        {...textProps}
         onFocus={this._onFocus}
         onBlur={this._onBlur}
         onChange={this._onChange}
@@ -1153,20 +1242,19 @@ const TextInput = createReactClass({
       />
     );
 
-    return (
-      <TouchableWithoutFeedback
-        onLayout={props.onLayout}
-        onPress={this._onPress}
-        rejectResponderTermination={props.rejectResponderTermination}
-        accessible={props.accessible}
-        accessibilityLabel={props.accessibilityLabel}
-        accessibilityRole={props.accessibilityRole}
-        accessibilityStates={props.accessibilityStates}
-        nativeID={this.props.nativeID}
-        testID={props.testID}>
+    if (isEditable) {
+      return (
+        <TouchableWithoutFeedback
+          rejectResponderTermination
+          onPress={this._onPress}
+          {...rootProps}
+        >
         {textContainer}
-      </TouchableWithoutFeedback>
-    );
+        </TouchableWithoutFeedback>
+      )
+    }
+
+    return textContainer
   },
 
   _renderAndroid: function() {
@@ -1339,7 +1427,98 @@ const TextInput = createReactClass({
   _onScroll: function(event: ScrollEvent) {
     this.props.onScroll && this.props.onScroll(event);
   },
+  _createResponseHandlers(): ResponseHandlers {
+    return {
+      onStartShouldSetResponder: (): boolean => {
+        const {onStartShouldSetResponder} = this.props;
+        const shouldSetResponder =
+         isTouchable(this.props);
+
+        if (shouldSetResponder) {
+          this._attachTouchHandlers();
+        }
+        return shouldSetResponder;
+      },
+      onResponderGrant: (event: SyntheticEvent<>, dispatchID: string): void => {
+        nullthrows(this.touchableHandleResponderGrant)(event, dispatchID);
+        if (this.props.onResponderGrant != null) {
+          this.props.onResponderGrant.call(this, event, dispatchID);
+        }
+      },
+      onResponderMove: (event: SyntheticEvent<>): void => {
+        nullthrows(this.touchableHandleResponderMove)(event);
+        if (this.props.onResponderMove != null) {
+          this.props.onResponderMove.call(this, event);
+        }
+      },
+      onResponderRelease: (event: SyntheticEvent<>): void => {
+        nullthrows(this.touchableHandleResponderRelease)(event);
+        if (this.props.onResponderRelease != null) {
+          this.props.onResponderRelease.call(this, event);
+        }
+      },
+      onResponderTerminate: (event: SyntheticEvent<>): void => {
+        nullthrows(this.touchableHandleResponderTerminate)(event);
+        if (this.props.onResponderTerminate != null) {
+          this.props.onResponderTerminate.call(this, event);
+        }
+      },
+      onResponderTerminationRequest: (): boolean => {
+        const {onResponderTerminationRequest} = this.props;
+        if (!nullthrows(this.touchableHandleResponderTerminationRequest)()) {
+          return false;
+        }
+        if (onResponderTerminationRequest == null) {
+          return true;
+        }
+        return onResponderTerminationRequest();
+      },
+    };
+  },
+
+  /**
+   * Lazily attaches Touchable.Mixin handlers.
+   */
+  _attachTouchHandlers(): void {
+    if (this.touchableGetPressRectOffset != null) {
+      return;
+    }
+    for (const key in Touchable.Mixin) {
+      if (typeof Touchable.Mixin[key] === 'function') {
+        (this: any)[key] = Touchable.Mixin[key].bind(this);
+      }
+    }
+    this.touchableHandleActivePressIn = (): void => {
+      if (!this.props.suppressHighlighting && isTouchable(this.props)) {
+        this.setState({isHighlighted: true});
+      }
+    };
+    this.touchableHandleActivePressOut = (): void => {
+      if (!this.props.suppressHighlighting && isTouchable(this.props)) {
+        this.setState({isHighlighted: false});
+      }
+    };
+    this.touchableHandlePress = (event: PressEvent): void => {
+      if (this.props.onPress != null) {
+        this.props.onPress(event);
+      }
+    };
+    this.touchableHandleLongPress = (event: PressEvent): void => {
+      if (this.props.onLongPress != null) {
+        this.props.onLongPress(event);
+      }
+    };
+    this.touchableGetPressRectOffset = (): PressRetentionOffset =>
+      this.props.pressRetentionOffset == null
+        ? PRESS_RECT_OFFSET
+        : this.props.pressRetentionOffset;
+  }
 });
+
+const isTouchable = (props: Props): boolean =>
+  props.onPress != null ||
+  props.onLongPress != null ||
+  props.onStartShouldSetResponder != null;
 
 class InternalTextInputType extends ReactNative.NativeComponent<Props> {
   clear() {}
@@ -1358,5 +1537,14 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
 });
+
+// TextInput.getDerivedStateFromProps = (nextProps: Object, prevState: Object) => {
+//   return prevState.responseHandlers == null && isTouchable(nextProps)
+//     ? {
+//         ...prevState,
+//         responseHandlers: prevState.createResponderHandlers(),
+//       }
+//     : null;
+// }
 
 module.exports = TypedTextInput;

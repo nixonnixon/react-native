@@ -12,12 +12,11 @@
 
 const DeprecatedTextPropTypes = require('../DeprecatedPropTypes/DeprecatedTextPropTypes');
 const React = require('react');
-const ReactNativeViewAttributes = require('../Components/View/ReactNativeViewAttributes');
 const TextAncestor = require('./TextAncestor');
 const Touchable = require('../Components/Touchable/Touchable');
-const UIManager = require('../ReactNative/UIManager');
 
-const createReactNativeComponentClass = require('../Renderer/shims/createReactNativeComponentClass');
+const { RCTText, RCTVirtualText, viewConfig } = require('RCTText');
+
 const nullthrows = require('nullthrows');
 const processColor = require('../StyleSheet/processColor');
 
@@ -51,34 +50,6 @@ type State = {|
 
 const PRESS_RECT_OFFSET = {top: 20, left: 20, right: 20, bottom: 30};
 
-const viewConfig = {
-  validAttributes: {
-    ...ReactNativeViewAttributes.UIView,
-    isHighlighted: true,
-    numberOfLines: true,
-    ellipsizeMode: true,
-    allowFontScaling: true,
-    maxFontSizeMultiplier: true,
-    disabled: true,
-    selectable: true,
-    selectionColor: true,
-    adjustsFontSizeToFit: true,
-    minimumFontScale: true,
-    textBreakStrategy: true,
-    onTextLayout: true,
-    onInlineViewLayout: true,
-    dataDetectorType: true,
-  },
-  directEventTypes: {
-    topTextLayout: {
-      registrationName: 'onTextLayout',
-    },
-    topInlineViewLayout: {
-      registrationName: 'onInlineViewLayout',
-    },
-  },
-  uiViewClassName: 'RCTText',
-};
 
 /**
  * A React component for displaying text.
@@ -259,29 +230,14 @@ const isTouchable = (props: Props): boolean =>
   props.onLongPress != null ||
   props.onStartShouldSetResponder != null;
 
-const RCTText = createReactNativeComponentClass(
-  viewConfig.uiViewClassName,
-  () => viewConfig,
-);
-
-const RCTVirtualText =
-  UIManager.getViewManagerConfig('RCTVirtualText') == null
-    ? RCTText
-    : createReactNativeComponentClass('RCTVirtualText', () => ({
-        validAttributes: {
-          ...ReactNativeViewAttributes.UIView,
-          isHighlighted: true,
-          maxFontSizeMultiplier: true,
-        },
-        uiViewClassName: 'RCTVirtualText',
-      }));
-
 const Text = (
   props: TextProps,
   forwardedRef: ?React.Ref<'RCTText' | 'RCTVirtualText'>,
 ) => {
   return <TouchableText {...props} forwardedRef={forwardedRef} />;
 };
+
+// $FlowFixMe - TODO T29156721 `React.forwardRef` is not defined in Flow, yet.
 const TextToExport = React.forwardRef(Text);
 TextToExport.displayName = 'Text';
 
