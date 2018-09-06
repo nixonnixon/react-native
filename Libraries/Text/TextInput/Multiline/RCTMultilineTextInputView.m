@@ -8,8 +8,10 @@
 #import "RCTMultilineTextInputView.h"
 
 #import <React/RCTUtils.h>
+#import <React/UIView+React.h>
 
 #import "RCTUITextView.h"
+#import "RCTTextAttributes.h"
 
 @implementation RCTMultilineTextInputView
 {
@@ -82,6 +84,31 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)coder)
       @"zoomScale": @(scrollView.zoomScale ?: 1),
     });
   }
+}
+
+- (NSNumber *)reactTagAtPoint:(CGPoint)point
+{
+  NSNumber *reactTag = self.reactTag;
+
+  NSLog(@"%@", reactTag);
+
+  RCTUITextView *textView = _backedTextInputView;
+  NSTextStorage *textStorage = [textView textStorage];
+  NSLayoutManager *layoutManager = textStorage.layoutManagers.firstObject;
+  NSTextContainer *textContainer = layoutManager.textContainers.firstObject;
+
+  CGFloat fraction;
+  NSUInteger characterIndex = [layoutManager characterIndexForPoint:point
+                                                    inTextContainer:textContainer
+                           fractionOfDistanceBetweenInsertionPoints:&fraction];
+
+  // If the point is not before (fraction == 0.0) the first character and not
+  // after (fraction == 1.0) the last character, then the attribute is valid.
+  if (textStorage.length > 0 && (fraction > 0 || characterIndex > 0) && (fraction < 1 || characterIndex < textStorage.length - 1)) {
+    reactTag = [textStorage attribute:RCTTextAttributesTagAttributeName atIndex:characterIndex effectiveRange:NULL];
+  }
+
+  return reactTag;
 }
 
 @end

@@ -16,6 +16,7 @@ const TextAncestor = require('TextAncestor');
 const TextPropTypes = require('TextPropTypes');
 const Touchable = require('Touchable');
 const UIManager = require('UIManager');
+const { RCTText, RCTVirtualText, viewConfig } = require('RCTText');
 
 const createReactNativeComponentClass = require('createReactNativeComponentClass');
 const nullthrows = require('fbjs/lib/nullthrows');
@@ -51,22 +52,6 @@ type State = {|
 
 const PRESS_RECT_OFFSET = {top: 20, left: 20, right: 20, bottom: 30};
 
-const viewConfig = {
-  validAttributes: {
-    ...ReactNativeViewAttributes.UIView,
-    isHighlighted: true,
-    numberOfLines: true,
-    ellipsizeMode: true,
-    allowFontScaling: true,
-    disabled: true,
-    selectable: true,
-    selectionColor: true,
-    adjustsFontSizeToFit: true,
-    minimumFontScale: true,
-    textBreakStrategy: true,
-  },
-  uiViewClassName: 'RCTText',
-};
 
 /**
  * A React component for displaying text.
@@ -244,22 +229,6 @@ const isTouchable = (props: Props): boolean =>
   props.onPress != null ||
   props.onLongPress != null ||
   props.onStartShouldSetResponder != null;
-
-const RCTText = createReactNativeComponentClass(
-  viewConfig.uiViewClassName,
-  () => viewConfig,
-);
-
-const RCTVirtualText =
-  UIManager.RCTVirtualText == null
-    ? RCTText
-    : createReactNativeComponentClass('RCTVirtualText', () => ({
-        validAttributes: {
-          ...ReactNativeViewAttributes.UIView,
-          isHighlighted: true,
-        },
-        uiViewClassName: 'RCTVirtualText',
-      }));
 
 // $FlowFixMe - TODO T29156721 `React.forwardRef` is not defined in Flow, yet.
 const Text = React.forwardRef((props, ref) => (
