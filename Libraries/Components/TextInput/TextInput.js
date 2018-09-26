@@ -839,7 +839,7 @@ const TouchableTextInput = createReactClass({
     return {
       ...Touchable.Mixin.touchableGetInitialState(),
       isHighlighted: false,
-      createResponderHandlers: this._createResponseHandlers.bind(this),
+      createResponderHandlers: this._createResponseHandlers.bind(null, this),
       responseHandlers: null,
     };
   },
