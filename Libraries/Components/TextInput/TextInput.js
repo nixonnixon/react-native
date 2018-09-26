@@ -344,7 +344,7 @@ type State = {|
  *
  */
 
-const TouchableTextInput = createReactClass({
+const TextInput = createReactClass({
   displayName: 'TextInput',
   statics: {
     State: {
@@ -934,7 +934,7 @@ const TouchableTextInput = createReactClass({
     return (<TextAncestor.Consumer>
         {hasTextAncestor =>
           hasTextAncestor ? (
-            <RCTVirtualText {...props} ref={props.forwardedRef} />
+            <RCTVirtualText {...props} />
           ) : (
             <TextAncestor.Provider value={true}>
               {textInput}
@@ -1086,7 +1086,6 @@ const TouchableTextInput = createReactClass({
         ref={this._setNativeRef}
         {...props}
         {...textProps}
-        ref={props.forwardedRef}
         onFocus={this._onFocus}
         onBlur={this._onBlur}
         onChange={this._onChange}
@@ -1382,12 +1381,6 @@ class InternalTextInputType extends ReactNative.NativeComponent<Props> {
   // $FlowFixMe
   isFocused(): boolean {}
 }
-
-const TextInput = React.forwardRef((props, ref) => (
-  <TouchableTextInput {...props} forwardedRef={ref} />
-));
-
-TextInput.displayName = 'TextInput';
 
 const TypedTextInput = ((TextInput: any): Class<InternalTextInputType>);
 
