@@ -53,6 +53,8 @@ export type TextProps = $ReadOnly<{
   disabled?: ?boolean,
   selectionColor?: ?string,
   textBreakStrategy?: 'balanced' | 'highQuality' | 'simple',
+  onCustomActionItemClicked?: ?Function,
+  customActionItem?: string,
 
   // iOS Only
   adjustsFontSizeToFit?: ?boolean,
