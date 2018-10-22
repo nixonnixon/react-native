@@ -17,6 +17,8 @@ const viewConfig = {
     adjustsFontSizeToFit: true,
     minimumFontScale: true,
     textBreakStrategy: true,
+    onCustomActionItemClicked: true,
+    customActionItem: true
   },
   uiViewClassName: 'RCTText'
 };
