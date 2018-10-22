@@ -84,6 +84,7 @@ import java.util.Map;
         .put("topSelectionChange", MapBuilder.of(rn, "onSelectionChange"))
         .put("topMessage", MapBuilder.of(rn, "onMessage"))
         .put("topClick", MapBuilder.of(rn, "onClick"))
+        .put("topCustomActionItemClicked", MapBuilder.of(rn, "onCustomActionItemClicked"))
         // Scroll events are added as per task T22348735.
         // Subject for further improvement.
         .put("topScrollBeginDrag", MapBuilder.of(rn, "onScrollBeginDrag"))

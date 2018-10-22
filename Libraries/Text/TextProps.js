@@ -159,6 +159,9 @@ export type TextProps = $ReadOnly<{|
    * See https://facebook.github.io/react-native/docs/text.html#selectioncolor
    */
   selectionColor?: ?string,
+  textBreakStrategy?: 'balanced' | 'highQuality' | 'simple',
+  onCustomActionItemClicked?: ?Function,
+  customActionItem?: string,
 
   dataDetectorType?: ?('phoneNumber' | 'link' | 'email' | 'none' | 'all'),
 

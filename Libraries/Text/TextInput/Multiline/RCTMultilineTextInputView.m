@@ -30,6 +30,7 @@
     _backedTextInputView.textColor = [UIColor blackColor];
     // This line actually removes 5pt (default value) left and right padding in UITextView.
     _backedTextInputView.textContainer.lineFragmentPadding = 0;
+    _backedTextInputView.textContainerInset = UIEdgeInsetsMake(0, 0, 0, 0);
 #if !TARGET_OS_TV
     _backedTextInputView.scrollsToTop = NO;
 #endif

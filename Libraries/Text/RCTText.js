@@ -21,6 +21,8 @@ const viewConfig = {
     onTextLayout: true,
     onInlineViewLayout: true,
     dataDetectorType: true,
+    onCustomActionItemClicked: true,
+    customActionItem: true
   },
   directEventTypes: {
     topTextLayout: {
