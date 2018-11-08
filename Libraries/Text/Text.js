@@ -231,9 +231,13 @@ const isTouchable = (props: Props): boolean =>
   props.onStartShouldSetResponder != null;
 
 // $FlowFixMe - TODO T29156721 `React.forwardRef` is not defined in Flow, yet.
-const TextToExport = React.forwardRef(Text);
+const Text = React.forwardRef((props, ref) => (
+  <TouchableText {...props} forwardedRef={ref} />
+));
+
+Text.displayName = 'Text';
 
 // TODO: Deprecate this.
-TextToExport.propTypes = TextPropTypes;
+Text.propTypes = TextPropTypes;
 
-module.exports = (TextToExport: Class<NativeComponent<TextProps>>);
+module.exports = ((Text: any): Class<NativeComponent<TextProps>>);
